@@ -1,5 +1,5 @@
 from neo4jrestclient.client import GraphDatabase, NotFoundError
-import tweepy, datetime, logging
+import tweepy, datetime, logging, pandas
 
 logging.basicConfig()
 log = logging.getLogger("Main")
@@ -217,10 +217,29 @@ class TwitterGraph(object):
             user = self.add_user(user_id)
             ref_node.relationships.create('Contains',  user)
 
+    def degrees(self):
+        q = """ START user=node(*) 
+                MATCH user <-[:Follows]-> u 
+                RETURN user.id AS id, 
+                user.screen_name? AS screen_name, 
+                user.detail AS detail, 
+                count(user) AS degree"""
+        results = self.gdb.extensions.CypherPlugin.execute_query(q)
+        df = pandas.DataFrame(results['data'], columns=results['columns'])
+        
+        return df.sort('degree') # sort descending on degree
+
+    def next_user_id(self):
+        df = self.degrees()
+        selected_id = df[df['detail'] == 'basic'].tail(1)['id']
+
+        return int(selected_id)
+
 
 if __name__ == '__main__':
     from config import AUTH
-    t = TwitterGraph(AUTH)
+    dburl = "http://192.168.1.111:7474/db/data/"
+    t = TwitterGraph(AUTH, dburl)
     mh_id = '231959424'
     rid = 216027858
     seeds = ['openaccess_be', 'iRail', 'openbelgium', 'okfnbe', 'AppsForGhent']
