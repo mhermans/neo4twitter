@@ -1,4 +1,5 @@
 *.py[co]
+config.py
 
 # Packages
 *.egg
