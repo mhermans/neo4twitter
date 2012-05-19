@@ -22,6 +22,7 @@ class TwitterGraph(object):
         self.api = tweepy.API(auth, cache=self.TWEEPY_CACHE)
 
         log.info('Authenticated with Twitter')
+        log.info('Remaing requests this hour: %s' % self.limit)
 
 
     def __init__(self, auth_dict, 
@@ -118,9 +119,9 @@ class TwitterGraph(object):
     def add_user(self, identifier, overwrite = False):
         """Adds user to graph, based on ID or screen name."""
 
-        if not identifier.isalnum():
-            return None
-            #identifier = identifier # TODO screen name -> user id
+        #if not identifier.isalnum():
+        #    return None
+        #    identifier = identifier # TODO screen name -> user id
 
         # skip adding user if existing & detailed
         existing_user = self.get_user(identifier)
@@ -181,10 +182,30 @@ class TwitterGraph(object):
 
         return user
 
+    #@property
+    #def nnodes(self):
+    #    return len(self.gdb.extensions.GremlinPlugin.execute_script('g.V'))
+
+    #@property
+    #def nedges(self):
+    #    return len(self.gdb.extensions.GremlinPlugin.execute_script('g.V'))
+
+    def seed(self, users):
+        # TODO check for empty graph
+        #   => stop if not empty
+        
+        ref_node = t.gdb.node.get(0) # refnode depreciated?
+        ref_node.properties = {'label': 'seeds'}
+        for user_id in users:
+            log.info('Adding seed node user %s' % user_id)
+            user = self.add_user(user_id)
+            ref_node.relationships.create('Contains',  user)
+
 
 if __name__ == '__main__':
     from config import AUTH
     t = TwitterGraph(AUTH)
     mh_id = '231959424'
     rid = 216027858
-    #mh = t.add_user('231959424')
+    #seeds = ['openaccess_be', 'iRail', 'openbelgium', 'okfnbe', 'AppsForGhent']
+    seeds = ['apache_be', 'openaccess_be']
