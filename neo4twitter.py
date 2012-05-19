@@ -76,6 +76,20 @@ class TwitterGraph(object):
             log.info('No user in graph with ID %s' % user_id)
             return None
 
+    def relationship_exists(self, start_node, end_node, reltype):
+        d = (start_node.id, end_node.id, reltype)
+        q = 'START a = node(%s), b = node(%s) MATCH a -[r:%s]-> b RETURN count(r)' % d
+        result = self.gdb.extensions.CypherPlugin.execute_query(q).get('data')
+        if result: 
+            log.info('Found existing relationship %s -%s-> %s' % (d[0], d[2], d[1]))
+            return True
+        else:
+            log.info('No existing relationship %s -%s-> %s' % (d[0], d[2], d[1]))
+            return False
+
+
+    #def add_followers(self, user_node, direction='both'):
+
     def add_subscriptions(self, user_node):
 
         try:
@@ -94,9 +108,10 @@ class TwitterGraph(object):
                 follower_label = follower_node.get('screen_name')
             except NotFoundError:
                 follower_label = str(follower_node.get('id'))
-            
-            log.info('Adding follower %s for user %s' % (follower_label, user_label))
-            follower_node.relationships.create('Follows', user_node,
+
+            if not self.relationship_exists(follower_node, user_node, 'Follows'):
+                log.info('Adding follower %s for user %s' % (follower_label, user_label))
+                follower_node.relationships.create('Follows', user_node,
                     on=datetime.datetime.now())
 
         # add friends
@@ -111,9 +126,10 @@ class TwitterGraph(object):
             except NotFoundError:
                 friend_label = str(friend_node.get('id'))
 
-            log.info('Adding friend %s for user %s' % (friend_label, user_label))
-            user_node.relationships.create('Follows', friend_node,
-                    on=datetime.datetime.now())
+            if not self.relationship_exists(user_node, friend_node, 'Follows'):
+                log.info('Adding friend %s for user %s' % (friend_label, user_label))
+                user_node.relationships.create('Follows', friend_node,
+                        on=datetime.datetime.now())
 
 
     def add_user(self, identifier, overwrite = False):
@@ -207,5 +223,4 @@ if __name__ == '__main__':
     t = TwitterGraph(AUTH)
     mh_id = '231959424'
     rid = 216027858
-    #seeds = ['openaccess_be', 'iRail', 'openbelgium', 'okfnbe', 'AppsForGhent']
-    seeds = ['apache_be', 'openaccess_be']
+    seeds = ['openaccess_be', 'iRail', 'openbelgium', 'okfnbe', 'AppsForGhent']
