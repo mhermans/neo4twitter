@@ -228,6 +228,14 @@ class TwitterGraph(object):
 
         return int(selected_id)
 
+    def crawl(self):
+        i = self.gdb.nodes.indexes.get('users')
+        while self.limit > 10:
+            u = self.add_user(self.next_user_id())
+            log.info('Crawled user %s' % u.screen_name)
+            i['structure']['crawled'] = u
+
+
 
 if __name__ == '__main__':
     from config import AUTH

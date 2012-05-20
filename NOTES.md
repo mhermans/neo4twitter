@@ -17,3 +17,10 @@ n = t.gdb.nodes.get(0)
 
 'START irail = node:users(screen_name = "iRail"), pc = node:users(screen_name = "pietercolpaert") 
  MATCH pc <-[r]-> irail RETURN type(r), count(r)'
+
+
+# detect duplicate node twitter ids:
+ "START user = node(*) RETURN count(user.id) AS all, count(distinct user.id) AS distinct"
+
+ # summarize order of crawl:
+ "START n = node:users(structure='crawled') RETURN n.screen_name"
