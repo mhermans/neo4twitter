@@ -67,7 +67,10 @@ class TwitterGraph(object):
         """Get user node from graph if existing, based on ID."""
 
         i = self.gdb.nodes.indexes.get('users')
-        results = i.get('user_id', user_id) # always iterable
+        if str(user_id).isalnum(): # numerical ID
+            results = i.get('user_id', user_id) # always iterable
+        else:
+            results = i.get('screen_name', user_id) # always iterable
 
         if len(results) == 1:
             log.info('Found existing users, ID %s' % user_id)
@@ -132,27 +135,26 @@ class TwitterGraph(object):
                         on=datetime.datetime.now())
 
 
-    def add_user(self, identifier, overwrite = False):
+    def add_user(self, user_id):
         """Adds user to graph, based on ID or screen name."""
 
-        #if not identifier.isalnum():
-        #    return None
-        #    identifier = identifier # TODO screen name -> user id
+        if not str(user_id).isalnum():
+            raise ValueError('Identifier must be the numerical user ID')
 
         # skip adding user if existing & detailed
-        existing_user = self.get_user(identifier)
+        existing_user = self.get_user(user_id)
         if existing_user:
             if existing_user.get('detail') == 'full':
-                log.info('Not adding user %s, already (full) in graph' % identifier)
+                log.info('Not adding user %s, already (full) in graph' % user_id)
                 return existing_user
             if existing_user.get('detail') == 'basic':
-                log.info('Not adding user %s, already (basic) in graph: updating' % identifier)
+                log.info('Not adding user %s, already (basic) in graph: updating' % user_id)
                 return self.update_user(existing_user)
 
 
-        log.info('Adding user %s to graph' % identifier)
+        log.info('Adding user %s to graph' % user_id)
         # get and assign user data to node
-        props = self.fetch_user_data(identifier)
+        props = self.fetch_user_data(user_id)
         user_node = self.gdb.node(**props)
 
         # add user node to indexes
@@ -198,24 +200,15 @@ class TwitterGraph(object):
 
         return user
 
-    #@property
-    #def nnodes(self):
-    #    return len(self.gdb.extensions.GremlinPlugin.execute_script('g.V'))
-
-    #@property
-    #def nedges(self):
-    #    return len(self.gdb.extensions.GremlinPlugin.execute_script('g.V'))
-
     def seed(self, users):
         # TODO check for empty graph
         #   => stop if not empty
-        
-        ref_node = t.gdb.node.get(0) # refnode depreciated?
-        ref_node.properties = {'label': 'seeds'}
+       
+        i = self.gdb.nodes.indexes.get('users')
         for user_id in users:
             log.info('Adding seed node user %s' % user_id)
             user = self.add_user(user_id)
-            ref_node.relationships.create('Contains',  user)
+            i['structure']['seeds'] = user
 
     def degrees(self):
         q = """ START user=node(*) 
@@ -241,5 +234,9 @@ if __name__ == '__main__':
     dburl = "http://192.168.1.111:7474/db/data/"
     t = TwitterGraph(AUTH, dburl)
     mh_id = '231959424'
-    rid = 216027858
-    seeds = ['openaccess_be', 'iRail', 'openbelgium', 'okfnbe', 'AppsForGhent']
+    seeds = {
+            'openaccess_be' : 256512896, 
+            'iRail' : 228847735,
+            'openbelgium' : 86172466, 
+            'okfnbe' : 455729955, 
+            'AppsForGhent' : 286175617}
